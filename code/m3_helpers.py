@@ -10,11 +10,12 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, roc_auc_score, average_precision_score
 
-# food_insecure variable was created as a binary variable from the original FSCHHLDM variable that has 4 categories (0-4)
+# food_insecure variable was created as a binary variable from the original FSCHHLDM variable that has 4 categories (0-3)
+# the original variable had food insecurity responses representing (not food insecure = 0, marginal =1, moderate =2 or severe =3)
 # in this note, we are assigning this food_insecure variable to TARGET variable for ML language's sake
 # likewise, the original variable FWEIGHT is just being called WEIGHT for ML language purpose 
 
-TARGET = "food_insecure"     # 1 = any food insecurity (marginal, moderate or severe), 0 = food secure
+TARGET = "food_insecure"     # Following the food_insecure variable, the TARGET variable will contain 1 = any food insecurity and  0 = food secure
 WEIGHT = "FWEIGHT"           # the major income earner's person weight, used as a working household weight
 
 def make_X(df, cols):
