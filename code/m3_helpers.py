@@ -1,7 +1,8 @@
 """Helper functions for Notebook 03 (CIND 820 Milestone 3).
 
-Kept in a separate file so the notebook stays short and the functions can be reused in Milestone 4.
-Everything here works on one household table with the columns named below.
+This file contains functions that prepare the predictor variables for modelling, fit a logistic
+regression, make predictions, and calculate validation and test metrics. They are called from the
+Python notebooks and can be reused in the Milestone 4 analysis.
 """
 import numpy as np
 from sklearn.pipeline import Pipeline
@@ -9,12 +10,17 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, roc_auc_score, average_precision_score
 
+# food_insecure variable was created as a binary variable from the original FSCHHLDM variable that has 4 categories (0-4)
+# in this note, we are assigning this food_insecure variable to TARGET variable for ML language's sake
+# likewise, the original variable FWEIGHT is just being called WEIGHT for ML language purpose 
+
 TARGET = "food_insecure"     # 1 = any food insecurity (marginal, moderate or severe), 0 = food secure
 WEIGHT = "FWEIGHT"           # the major income earner's person weight, used as a working household weight
 
-
 def make_X(df, cols):
-    """Turn each predictor into text labels. NaN becomes the label 'Missing'."""
+    """Transform specified predictor columns into string-type text labels.
+    Converts the data to integer and string formats, replacing any missing 
+    or NaN values with the explicit label 'Missing'."""
     X = df[cols].copy()
     for c in cols:
         X[c] = X[c].astype("Int64").astype("string").fillna("Missing")
@@ -22,8 +28,9 @@ def make_X(df, cols):
 
 
 def fit_model(df, use_weights, cols, c_value=1.0):
-    """Fit encoder + logistic regression on df only. If use_weights, each household counts by FWEIGHT / mean(FWEIGHT).
-    Because the encoder is inside the pipeline, it learns its categories from df only (this is the leakage rule)."""
+    """Fit an encoder and a logistic regression model using only the provided dataframe (df). If use_weights is enabled, 
+    individual household counts are scaled by FWEIGHT divided by its mean (FWEIGHT / mean(FWEIGHT)). 
+    Because the encoder is integrated within the pipeline, it learns its categories strictly from df to adhere to data leakage rules."""
     model = Pipeline([
         ("encode", OneHotEncoder(handle_unknown="ignore")),     # a category never seen in df gets all zeros
         ("logit", LogisticRegression(C=c_value, max_iter=1000)),
@@ -34,12 +41,14 @@ def fit_model(df, use_weights, cols, c_value=1.0):
 
 
 def predict_prob(model, df, cols):
-    """Probability that each household is food insecure (column 1 = class 1)."""
+    """Compute the estimated probability for each household being food insecure, derived from the 
+    model's predictions where column 1 corresponds to class 1."""
     return model.predict_proba(make_X(df, cols))[:, 1]
 
 
 def confusion_scores(y, prob, threshold, w=None):
-    """Confusion matrix and the classification metrics at one cut-off. w = optional weights (FWEIGHT)."""
+    """Compute the confusion matrix and key classification metrics evaluated at a single classification cut-off threshold. 
+    Accepts an optional weight parameter (w) using FWEIGHT for weighted evaluations."""
     pred = (prob >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1], sample_weight=w).ravel()
     div = lambda a, b: a / b if b > 0 else np.nan
@@ -52,7 +61,9 @@ def confusion_scores(y, prob, threshold, w=None):
 
 
 def all_scores(y, prob, threshold, w=None):
-    """Confusion-based metrics plus ROC-AUC and PR-AUC (these two do not depend on the cut-off)."""
+    """Compute standard confusion-based classification metrics alongside ROC-AUC and PR-AUC scores. 
+    While confusion-based evaluations rely on a specific decision threshold, ROC-AUC and PR-AUC 
+    remain independent of any cut-off."""
     out = confusion_scores(y, prob, threshold, w)
     out["roc_auc"] = roc_auc_score(y, prob, sample_weight=w)
     out["pr_auc"] = average_precision_score(y, prob, sample_weight=w)
@@ -60,7 +71,9 @@ def all_scores(y, prob, threshold, w=None):
 
 
 def best_threshold(y, prob, w, metric):
-    """Try cut-offs 0.05, 0.06 ... 0.95 and return the one with the highest value of the chosen metric."""
+    """Search across a sequence of decision cut-offs ranging from 0.05 to 0.95 to evaluate 
+    the target performance metric, and return the specific cut-off 
+    threshold that achieves the highest value."""
     best_t, best_value = 0.5, -1
     for t in np.arange(0.05, 0.951, 0.01):
         value = confusion_scores(y, prob, t, w)[metric]
