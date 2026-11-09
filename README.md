@@ -1,104 +1,136 @@
 # Machine Learning Model Assessing the Temporal Stability of Food Insecurity Predictors
 
-**Author:** Muhammad Mizanur Shuvra
-**Course:** CIND 820 Big Data Analytics Project, Toronto Metropolitan University (Chang School)
-**Current stage:** Milestone 2 (architecture and data audit), October 2026
+**Author:** Muhammad Mizanur Shuvra  
+**Course:** CIND820 Capstone, Toronto Metropolitan University  
+**Current stage:** Milestone 3 — initial results and code (a working baseline model with validation by year)
 
 ## Project overview
 
-This project assesses the temporal stability of food insecurity prediction models using Canadian survey data from 2018 to 2022, and examines whether adding more recent data improves their predictive performance.
+This project examines whether models developed using earlier Canadian survey data remain useful for predicting household food insecurity in later periods. It also examines whether incorporating newer data improves subsequent predictive performance.
 
-It uses five annual Canadian Income Survey (CIS) Public Use Microdata Files (2018 to 2022). Each file is a separate cross-section of different households, so households are not followed over time.
+The analysis uses Canadian Income Survey (CIS) Public Use Microdata Files for the 2018–2022 reference years.
 
 ## Research questions
 
-1. **RQ1:** Which household characteristics are associated with food insecurity across Canadian survey periods from 2018 to 2022?
-2. **RQ2:** How well do prediction models trained on pre-pandemic data generalize to subsequent survey periods?
-3. **RQ3:** Does incorporating more recent data improve the out-of-time predictive performance of different modelling approaches?
+1. Which household characteristics are associated with food insecurity across the study years?
+2. How well do models trained using the 2018–2019 files generalize to later periods?
+3. Does incorporating newer data improve out-of-time predictive performance?
+
+## Where the project stands
+
+| Milestone | What it covers | Files |
+|---|---|---|
+| 1. Project design | Question, data and approach | report |
+| 2. Architecture and data audit | Reading the raw files, building the household dataset, exploring the data | notebooks 00, 01, 02 |
+| 3. Initial results and code | First working model for RQ2: a logistic regression fitted on 2018, checked on 2019, refitted on 2018–2019 and tested on 2020, 2021 and 2022 | notebook 003 and `m3_helpers.py` |
+| 4. Final analysis (planned) | Further models, RQ1 and RQ3, stability and model comparison | not started |
 
 ## Data source and access
 
-The data are published by Statistics Canada under the [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/terms-conditions/open-licence):
+The source data and accompanying dictionaries are published by Statistics Canada:
 
-- Canadian Income Survey, public-use microdata files, catalogue 72M0003X: <https://www150.statcan.gc.ca/n1/en/catalogue/72M0003X>
-- Persistent link (DOI): <https://doi.org/10.25318/72m0003x-eng>
+- [Canadian Income Survey public-use microdata — Catalogue 72M0003X](https://www150.statcan.gc.ca/n1/en/catalogue/72M0003X)
+- [Persistent product DOI](https://doi.org/10.25318/72m0003x-eng)
 
-The five data files are large fixed-width text files (`CIS2018_PUMF.txt` to `CIS2022_PUMF.txt`), one row per person. They are **not stored in this repository**. Download them, together with the data dictionary for each year, from Statistics Canada. The dictionary for each year is needed because the column positions are read from it.
+Download the 2018–2022 files and the corresponding data dictionaries. If a link is temporarily unavailable, search the Statistics Canada website for catalogue number **72M0003X**.
 
-The Statistics Canada catalogue pages were temporarily unavailable on 21 October 2026. If a link does not open, try again later or search the Statistics Canada website for catalogue number 72M0003X.
+The source files contain structured fixed-width text. Their layouts must be interpreted using the dictionary for the corresponding year.
+
+The prepared dataset, `household_table.csv` (one row per household, built by notebook 01), is not stored in this repository. It can be downloaded here: [household_table.csv](https://drive.google.com/file/d/1hKqMwiAFFjs3ku_oaWYMyZQffNIIUMCi/view?usp=sharing) (anyone with the link can view it). The same link is saved in `data/data_link.md`.
 
 ## Analytical sample and outcome
 
-- **Unit:** one row per household, taken from the record of the major income earner.
-- **Households kept:** single-person households and households made up of one economic family. Households with two or more economic families are left out (3.0% to 3.4% of households each year), because the income variable would then describe only one of the families.
-- **Outcome:** food insecurity status from the survey's household food security variable. It is coded 1 if the household is marginally, moderately or severely food insecure, and 0 if it is food secure.
-- **Training and testing years:** train on 2018 and 2019; test on 2020 and on 2021 to 2022.
+The prepared dataset contains **201,171 household observations** across five survey cycles.
 
-| Year | Households | Any food insecurity, unweighted | Any food insecurity, weighted |
-|---|---|---|---|
-| 2018 | 39,481 | 16.3% | 16.0% |
-| 2019 | 30,712 | 14.7% | 15.7% |
-| 2020 | 52,235 | 13.9% | 15.8% |
-| 2021 | 38,015 | 15.9% | 17.6% |
-| 2022 | 40,728 | 20.3% | 22.4% |
-| **Total** | **201,171** | | |
+One household record is selected using the major-income-earner indicator. The analysis retains single-person households and households containing one economic family.
 
-## Predictors
+The binary outcome (`food_insecure`, created from the survey variable `FSCHHLDM`) distinguishes food-secure households from households reporting marginal, moderate or severe food insecurity. This analysis does not link individual households across years.
 
-| Variable | Meaning |
-|---|---|
-| `income_quintile` | After-tax economic-family income divided by the square root of household size, grouped into weighted fifths within each year (dollars of that year, no price adjustment). Zero and negative incomes are kept, in the lowest fifth. |
-| `tenure` | Not owned, owned with a mortgage, or owned without a mortgage. |
-| `has_children` | At least one person under 18 in the household. |
-| `SEX` | Sex of the major income earner. |
-| `edu_household` | Highest education among household members aged 18 and over. |
-| `IMMST` | Immigrant status of the major income earner. |
-| `MAJRI` | Major source of income of the major income earner, used as a **proxy** for the household's main income source. |
-| `PROV` | Province. |
-| `HHSIZE` | Household size. |
+## Milestone 2 work
 
-`SEX`, `IMMST` and `MAJRI` describe the major income earner, not the whole household. The other variables describe the household.
+The completed data work covers:
 
-## Repository contents
+- Reading and checking the annual fixed-width files.
+- Harmonizing variables and constructing the household dataset.
+- Examining special response codes and missingness.
+- Summarizing the outcome and predictor distributions.
+- Comparing descriptive food-insecurity rates across groups.
+- Examining categorical associations using Cramér’s V.
 
-| Item | What it is |
-|---|---|
-| `01_build_household_dataset.ipynb` | Reads the five annual files, checks them against the dictionaries, builds the household table and prints a PASS or FAIL line for each data check. |
-| `02_eda.ipynb` | Exploratory data analysis: outcome by year, univariate and bivariate summaries, chi-square tests and Cramér's V. |
-| `EDA_outputs/` | The tables and charts produced by notebook 02. |
-| `ProcessedData/` | Created by notebook 01: `household_table.csv` and three small summary tables (missing values, sample flow and income cut-offs by year). If this folder is not in the repository, run notebook 01 to create it. |
+The report and notebooks document the preparation decisions and exploratory results.
 
-## How to run the notebooks
+## Milestone 3 work
 
-1. Download the five CIS files and the data dictionaries from Statistics Canada (see above).
-2. Create a folder named `CIND820_CapstoneProject` containing a subfolder `ProjectData`, and put the five `.txt` files in `ProjectData`. In Google Colab this folder sits in Google Drive; on your own computer it can be any local folder.
-3. Open `01_build_household_dataset.ipynb`. In the SETTINGS block at the top, set `base_path` to your folder, then run all cells. Check that every data check prints PASS.
-4. Open `02_eda.ipynb`, set `base_path` in the same way, and run all cells. The results are written to `EDA_outputs`.
+Notebook 003 uses the prepared household table and covers:
 
-The notebooks use Python with pandas, numpy, scipy and matplotlib, all of which are installed in Google Colab. Keep the original Statistics Canada files unchanged so that every step can be traced.
+- Checking the household counts against the Milestone 2 report.
+- Descriptive statistics, histograms and boxplots for adjusted income and household size (2018–2019).
+- A split by year, never at random: fit on 2018, validate on 2019, refit on 2018–2019, test once each on 2020, 2021 and 2022.
+- A logistic regression on nine predictors, each treated as a category, with missing values kept as their own category. Two versions run side by side: one counts every household equally, one weights households by FWEIGHT.
+- **Classification threshold selection.** The probability cut-off was chosen using the 2019 validation data only. Thresholds between 0.05 and 0.95 were evaluated, and the cut-off that maximized the F1 score was selected because it provided a balanced trade-off between precision and recall. The selected cut-offs (0.23 for the unweighted track and 0.25 for the weighted track) were frozen before any 2020-2022 test data were examined and were applied unchanged to all test years. This approach prevents information from future survey cycles from influencing model development and provides a cleaner assessment of how well a model developed on earlier years generalizes to later years.
+- Confusion matrices, ROC-AUC and PR-AUC.
+- A check of the overlap between household size and presence of children (2018 fit, 2019 validation).
 
-## Planned modelling (Milestones 3 and 4)
+The reusable functions are in `code/m3_helpers.py`.
 
-- **RQ1:** the same weighted logistic regression, fitted separately for each year (the baseline).
-- **RQ2:** logistic regression, decision tree and random forest trained on 2018 to 2019, with model selection kept inside the training years, then applied unchanged to 2020 and to 2021 to 2022.
-- **RQ3:** add newer years in sequence and test on the next period.
+## Planned modelling
 
-RQ2 and RQ3 will be run twice, with and without survey weights, and both sets of results will be reported side by side with no primary track.
+- **RQ1:** Fit comparable weighted logistic regressions separately by year.
+- **RQ2:** Train logistic regression, decision tree and random forest models using 2018–2019 data, then evaluate the unchanged models on 2020–2022. Milestone 3 covers the logistic regression only.
+- **RQ3:** Add newer completed years sequentially and compare updated and fixed models on the same subsequent held-out year.
 
-Model fitting is not part of Milestone 2.
+Cross-validation will be restricted to the training data. Confusion matrices will help describe classification performance on evaluation samples.
 
-## Limits to keep in mind
+The decision tree, the random forest, RQ1 and RQ3 are planned work for Milestone 4.
 
-- The files are repeated cross-sections of different households, so the results describe how associations and predictions hold across survey years, not how individual households change.
-- The survey covers the ten provinces only, not the territories.
-- The household's weight is the major income earner's person weight (`FWEIGHT`). The public file has no bootstrap weights, so weighted results report odds ratios, not p-values. The chi-square tests and Cramér's V in notebook 02 are unweighted.
-- `SEX`, `IMMST` and `MAJRI` describe the earner, and `MAJRI` is a proxy.
-- One predictor category, "no income" in `MAJRI`, has no households in the training years.
-- `HHSIZE` and `has_children` overlap strongly (Cramér's V 0.78 in 2018 to 2019).
-- Associations are not causes.
+## Folder structure
+
+```
+README.md
+notebooks/         00_data_check.ipynb
+                   01_build_household_dataset.ipynb
+                   02_eda.ipynb
+                   003_initial_results_logistic_regression_simple.ipynb
+compiled/          HTML and PDF versions of notebook 003
+code/              m3_helpers.py
+data/              README.md (data notes and download link for household_table.csv)
+ProcessedData/     output of notebook 01
+EDA_outputs/       tables and figures from notebook 02
+docs/              setup guides: 1_get_the_data.md, 2_open_in_colab.md, 3_check_variable_counts.md, FAQ.md
+```
+
+## Running the notebooks
+
+The notebooks run in Google Colab and read and write files in Google Drive, in a folder called `CIND820_CapstoneProject`:
+
+```
+CIND820_CapstoneProject/
+  ProjectData/      the five CIS PUMF text files (CIS2018_PUMF.txt ... CIS2022_PUMF.txt)
+  ProcessedData/    household_table.csv (made by notebook 01)
+  EDA_outputs/      tables and figures (made by notebook 02)
+  code/             m3_helpers.py
+  M3_outputs/       made by notebook 003
+```
+
+1. Download the required CIS files and dictionaries, and copy the files into the Drive folder as shown.
+2. Open each notebook in Google Colab and run it from the top. Each notebook starts by mounting Google Drive, so click Allow when asked.
+3. Run the notebooks in this order: 00, 01, 02, then 003. To run only notebook 003, download `household_table.csv` from the link above, put it in `ProcessedData/`, and put `m3_helpers.py` in `code/`.
+4. Notebook 003 saves its tables and figures in `M3_outputs`. Review the saved outputs alongside the report.
+
+Keep the original source files unchanged so that preparation steps remain traceable.
+
+Software: Google Colab with pandas, numpy, matplotlib and scikit-learn. Notebook 003, Step 1, prints the versions. In the run submitted for Milestone 3 these were pandas 2.2.3 and scikit-learn 1.6.1.
+
+## Interpretation
+
+Weighted descriptive results use FWEIGHT from the selected major-income-earner record as a working household weight. Estimates should be interpreted within the project’s sample restrictions and weighting approach.
+
+The annual files are repeated cross-sectional surveys. Associations do not establish causation, and exploratory findings do not demonstrate that predictive performance has changed over time.
 
 ## Attribution and AI assistance
 
-Source data: Statistics Canada, Canadian Income Survey (public-use microdata files), used under the Statistics Canada Open Licence.
+Source data: Statistics Canada, Canadian Income Survey.
 
-Claude (Anthropic, Sonnet 5.5) drafted the code in notebooks 01 and 02 and the pipeline diagram, and wrote this README, based on an earlier README draft from ChatGPT. The author made the research decisions, ran and checked the notebooks, and is responsible for the work submitted. The report's Generative AI declaration gives the full account.
+Data use follows the [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/terms-conditions/open-licence).
+
+Claude prepared the final set of code and the helper file, and assisted with troubleshooting and with preparing the tables and figures. ChatGPT prepared the initial version of the code and was consulted for initial planning and literature organization. The report's Generative AI declaration provides further details. The author is responsible for all final decisions, the writing in his own words, code execution and verification, and the submitted work.
